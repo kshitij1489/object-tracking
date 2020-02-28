@@ -12,8 +12,9 @@ while(True):
     # Capture frame-by-frame
     ret, frame = cap.read()
 
-    frame_with_boxes = model.run_object_recognition(frame)
+    frame_with_boxes, box_count = model.run_object_recognition(frame)
 
+    cv2.putText(frame_with_boxes, 'People: '+ str(box_count), (15, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
     cv2.imshow('frame',frame_with_boxes)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

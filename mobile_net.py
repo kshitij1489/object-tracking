@@ -21,29 +21,6 @@ MAX_OBJECTS = 10
 # Labels of interest
 LABEL_SELECTOR = set([b'Person'])
 
-def display_image(image, image_window=False):
-  fig = plt.figure(figsize=(20, 15))
-  plt.grid(False)
-  plt.imshow(image)
-  print(image)
-  if image_window:
-    Image.fromarray(image).show()
-
-def download_and_resize_image(url, new_width=256, new_height=256, display=False):
-  _, filename = tempfile.mkstemp(suffix=".jpg")
-  response = urlopen(url)
-  image_data = response.read()
-  image_data = BytesIO(image_data)
-  pil_image = Image.open(image_data)
-  pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
-  pil_image_rgb = pil_image.convert("RGB")
-  pil_image_rgb.save(filename, format="JPEG", quality=90)
-  print("Image downloaded to %s." % filename)
-  if display:
-    display_image(pil_image)
-  return filename
-
-
 def draw_bounding_box_on_image(image, ymin, xmin, ymax, xmax, color,
                                font, thickness=4, display_str_list=()):
   """Adds a bounding box to an image."""
@@ -79,7 +56,7 @@ def draw_bounding_box_on_image(image, ymin, xmin, ymax, xmax, color,
     text_bottom -= text_height - 2 * margin
 
 
-def draw_boxes(image, boxes, class_names, scores, selected_indices, max_boxes=MAX_OBJECTS, min_score=0.2):
+def draw_boxes(image, boxes, class_names, scores, selected_indices, max_boxes=MAX_OBJECTS, min_score=0.3):
   """Overlay labeled boxes on an image with formatted scores and label names."""
   colors = list(ImageColor.colormap.values())
   font = ImageFont.load_default()
@@ -97,31 +74,7 @@ def draw_boxes(image, boxes, class_names, scores, selected_indices, max_boxes=MA
       draw_bounding_box_on_image( image_pil, ymin, xmin, ymax, xmax, color, font, display_str_list=[display_str])
       np.copyto(image, np.array(image_pil))
       box_count += 1
-  return image
-
-def load_img(path):
-  img = tf.io.read_file(path)
-  img = tf.image.decode_jpeg(img, channels=3)
-  return img
-
-def run_detector(detector, path):
-  img = load_img(path)
-
-  converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-  start_time = time.time()
-  result = detector(converted_img)
-  end_time = time.time()
-
-  result = {key:value.numpy() for key,value in result.items()}
-
-  print("Found %d objects." % len(result["detection_scores"]))
-  print("Inference time: ", end_time-start_time)
-
-  image_with_boxes = draw_boxes(
-      img.numpy(), result["detection_boxes"],
-      result["detection_class_entities"], result["detection_scores"])
-
-  display_image(image_with_boxes, True)
+  return image, box_count
 
 def get_boxes(image, boxes, class_names, scores, selected_indices, min_score=0.2):
   """Overlay labeled boxes on an image with formatted scores and label names."""
@@ -143,7 +96,7 @@ def get_boxes(image, boxes, class_names, scores, selected_indices, min_score=0.2
   return box_lst
 
 def non_max_suppression(boxes, scores):
-    selected_indices = tf.image.non_max_suppression(boxes, scores, 100, iou_threshold=0.5,
+    selected_indices = tf.image.non_max_suppression(boxes, scores, 1000, iou_threshold=0.5,
                                                     score_threshold=float('-inf'), name=None)
     #selected_boxes = tf.gather(boxes, selected_indices)
     return selected_indices.numpy()
@@ -160,10 +113,10 @@ class ObjectRecognition:
         selected_indices = non_max_suppression(result['detection_boxes'], result['detection_scores'])
         result = {key: value.numpy() for key, value in result.items()}
 
-        image_with_boxes = draw_boxes(
+        image_with_boxes, box_count = draw_boxes(
             frame, result["detection_boxes"],
             result["detection_class_entities"], result["detection_scores"], selected_indices)
-        return image_with_boxes
+        return image_with_boxes, box_count
 
     def get_boxes(self, frame):
         converted_img = tf.image.convert_image_dtype(frame, tf.float32)[tf.newaxis, ...]
