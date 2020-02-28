@@ -1,23 +1,25 @@
 import tensorflow as tf
 import tensorflow_hub as hub
-# For downloading the image.
+
 import matplotlib.pyplot as plt
 import tempfile
 from six.moves.urllib.request import urlopen
 from six import BytesIO
-# For drawing onto the image.
+
 import numpy as np
 from PIL import Image
 from PIL import ImageColor
 from PIL import ImageDraw
 from PIL import ImageFont
 from PIL import ImageOps
-# For measuring the inference time.
+
 import time
 
+# Maximum objects to be classified in the image
 MAX_OBJECTS = 10
 
-label_filter = set([b'Person'])
+# Labels of interest
+LABEL_SELECTOR = set([b'Person'])
 
 def display_image(image, image_window=False):
   fig = plt.figure(figsize=(20, 15))
@@ -85,9 +87,9 @@ def draw_boxes(image, boxes, class_names, scores, selected_indices, max_boxes=MA
   for i in range(boxes.shape[0]):
     if box_count >= MAX_OBJECTS:
         break
-    if class_names[i] not in label_filter or i not in selected_indices:
+    if i not in selected_indices:
         continue
-    if scores[i] >= min_score:
+    if scores[i] >= min_score and class_names[i] in LABEL_SELECTOR:
       ymin, xmin, ymax, xmax = tuple(boxes[i])
       display_str = "{}: {}%".format(class_names[i].decode("ascii"), int(100 * scores[i]))
       color = colors[hash(class_names[i]) % len(colors)]
@@ -128,7 +130,7 @@ def get_boxes(image, boxes, class_names, scores, selected_indices, min_score=0.2
   for i in range(boxes.shape[0]):
     if box_count >= MAX_OBJECTS:
         break
-    if class_names[i] not in label_filter or i not in selected_indices:
+    if class_names[i] not in LABEL_SELECTOR or i not in selected_indices:
         continue
     if scores[i] >= min_score:
       ymin, xmin, ymax, xmax = tuple(boxes[i])
@@ -144,7 +146,6 @@ def non_max_suppression(boxes, scores):
     selected_indices = tf.image.non_max_suppression(boxes, scores, 100, iou_threshold=0.5,
                                                     score_threshold=float('-inf'), name=None)
     #selected_boxes = tf.gather(boxes, selected_indices)
-    print(boxes.numpy().shape, selected_indices.numpy().shape)
     return selected_indices.numpy()
 
 
