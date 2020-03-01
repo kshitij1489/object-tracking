@@ -1,7 +1,8 @@
+import sys
 import cv2
 from mobile_net import *
 
-cap = cv2.VideoCapture(cv2.samples.findFile("vtest.avi"))
+cap = cv2.VideoCapture(cv2.samples.findFile(sys.argv[1]))
 
 model = ObjectRecognition()
 
