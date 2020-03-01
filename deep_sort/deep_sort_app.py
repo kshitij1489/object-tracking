@@ -1,11 +1,11 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
+
 from deep_sort.application_util import preprocessing
-from deep_sort.application_util import visualization
+from deep_sort.application_util.visualization import draw_trackers
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.detection import Detection
 from deep_sort.deep_sort.tracker import Tracker
-
 
 def gather_sequence_info(detections, image):
     """Gather sequence information, such as image filenames, detections,
@@ -29,8 +29,7 @@ def gather_sequence_info(detections, image):
     }
     return seq_info
 
-
-def create_detections(detection_mat, frame_idx, min_height=0):
+def create_detections(detection_mat, min_height=0, frame_idx=1):
     """Create detections for given frame index from the raw detection matrix.
     """
     frame_indices = detection_mat[:, 0].astype(np.int)
@@ -46,22 +45,23 @@ def create_detections(detection_mat, frame_idx, min_height=0):
 
 
 def run(image, detection, config, min_confidence,
-        nms_max_overlap, min_detection_height, display):
-
-    seq_info = gather_sequence_info(detection, image)
+        nms_max_overlap, min_detection_height):
+    img_cpy = image.copy()
+    seq_info = gather_sequence_info(detection, img_cpy)
     tracker = config.tracker
-    results = config.results
 
-    def frame_callback(vis, frame_idx):
+
+    def frame_callback():
 
         # Load image and generate detections.
         detections = create_detections(
-            seq_info["detections"], frame_idx, min_detection_height)
+            seq_info["detections"], min_detection_height)
         detections = [d for d in detections if d.confidence >= min_confidence]
 
         # Run non-maxima suppression.
         boxes = np.array([d.tlwh for d in detections])
         scores = np.array([d.confidence for d in detections])
+        # Check if non_max_suppression is needed again
         indices = preprocessing.non_max_suppression(
             boxes, nms_max_overlap, scores)
         detections = [detections[i] for i in indices]
@@ -70,34 +70,16 @@ def run(image, detection, config, min_confidence,
         tracker.predict()
         tracker.update(detections)
 
-        # Update visualization.
-        if display:
-            vis.set_image(image.copy())
-            vis.draw_detections(detections) # Uncomment later
-            vis.draw_trackers(tracker.tracks)
-
-        # Store results.
-        for track in tracker.tracks:
-            if not track.is_confirmed() or track.time_since_update > 1:
-                continue
-            bbox = track.to_tlwh()
-            results.append([
-                frame_idx, track.track_id, bbox[0], bbox[1], bbox[2], bbox[3]])
+        draw_trackers(tracker.tracks, img_cpy)
 
     # Run tracker.
-    if display:
-        visualizer = visualization.Visualization(seq_info, update_ms=5)
-    else:
-        visualizer = visualization.NoVisualization(seq_info)
-    visualizer.run(frame_callback)
+    frame_callback()
 
 def run_deep_sort(image, detection, config):
     min_confidence = 0.1
     nms_max_overlap = 1.0
     min_detection_height = 0.0
-    display = True
-    run(image, detection, config, min_confidence, nms_max_overlap, min_detection_height, display)
-
+    run(image, detection, config, min_confidence, nms_max_overlap, min_detection_height)
 
 class DeepSORTConfig:
     def __init__(self, max_cosine_distance=0.2, nn_budget = 100):

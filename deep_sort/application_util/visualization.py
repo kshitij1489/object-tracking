@@ -1,7 +1,5 @@
-import numpy as np
 import colorsys
-from .image_viewer import ImageViewer
-
+import cv2
 
 def create_unique_color_float(tag, hue_step=0.41):
     """Create a unique RGB color code for a given track id (tag).
@@ -52,76 +50,48 @@ def create_unique_color_uchar(tag, hue_step=0.41):
     return int(255*r), int(255*g), int(255*b)
 
 
-class NoVisualization(object):
+def draw_rectangle(x, y, w, h, image, label=None, thickness = 2, color = (0,0,255)):
+    """Draw a rectangle.
+
+    Parameters
+    ----------
+    x : float | int
+        Top left corner of the rectangle (x-axis).
+    y : float | int
+        Top let corner of the rectangle (y-axis).
+    w : float | int
+        Width of the rectangle.
+    h : float | int
+        Height of the rectangle.
+    label : Optional[str]
+        A text label that is placed at the top left corner of the
+        rectangle.
+
     """
-    A dummy visualization object that loops through all frames in a given
-    sequence to update the tracker without performing any visualization.
-    """
+    pt1 = int(x), int(y)
+    pt2 = int(x + w), int(y + h)
+    cv2.rectangle(image, pt1, pt2, color, thickness)
+    if label is not None:
+        text_size = cv2.getTextSize(
+            label, cv2.FONT_HERSHEY_PLAIN, 1, thickness)
 
-    def __init__(self, seq_info):
-        self.frame_idx = seq_info["min_frame_idx"]
-        self.last_idx = seq_info["max_frame_idx"]
+        center = pt1[0] + 5, pt1[1] + 5 + text_size[0][1]
+        pt2 = pt1[0] + 10 + text_size[0][0], pt1[1] + 10 + text_size[0][1]
+        cv2.rectangle(image, pt1, pt2, color, -1)
+        cv2.putText(image, label, center, cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), thickness)
+        cv2.imshow("frame", image)
 
-    def set_image(self, image):
-        pass
+def draw_detections(detections, image):
+    thickness = 2
+    color = 0, 0, 255
+    for i, detection in enumerate(detections):
+        draw_rectangle(*detection.tlwh, image, thickness=thickness, color=color)
 
-    def draw_groundtruth(self, track_ids, boxes):
-        pass
-
-    def draw_detections(self, detections):
-        pass
-
-    def draw_trackers(self, trackers):
-        pass
-
-    def run(self, frame_callback):
-        while self.frame_idx <= self.last_idx:
-            frame_callback(self, self.frame_idx)
-            self.frame_idx += 1
-
-
-class Visualization(object):
-    """
-    This class shows tracking output in an OpenCV image viewer.
-    """
-
-    def __init__(self, seq_info, update_ms):
-        image_shape = seq_info["image_size"][::-1]
-        aspect_ratio = float(image_shape[1]) / image_shape[0]
-        image_shape = 1024, int(aspect_ratio * 1024)
-        self.viewer = ImageViewer(
-            update_ms, image_shape, "Figure %s" % seq_info["sequence_name"])
-        self.viewer.thickness = 2
-        self.frame_idx = seq_info["min_frame_idx"]
-        self.last_idx = seq_info["max_frame_idx"]
-
-    def run(self, frame_callback):
-        self.viewer.run(lambda: self._update_fun(frame_callback))
-
-    def _update_fun(self, frame_callback):
-        if self.frame_idx > self.last_idx:
-            return False  # Terminate
-        frame_callback(self, self.frame_idx)
-        self.frame_idx += 1
-        return True
-
-    def set_image(self, image):
-        self.viewer.image = image
-
-    def draw_detections(self, detections):
-        self.viewer.thickness = 2
-        self.viewer.color = 0, 0, 255
-        for i, detection in enumerate(detections):
-            self.viewer.rectangle(*detection.tlwh)
-
-    def draw_trackers(self, tracks):
-        self.viewer.thickness = 2
-        for track in tracks:
-            if not track.is_confirmed() or track.time_since_update > 0:
-                continue
-            self.viewer.color = create_unique_color_uchar(track.track_id)
-            self.viewer.rectangle(
-                *track.to_tlwh().astype(np.int), label=str(track.track_id))
-            # self.viewer.gaussian(track.mean[:2], track.covariance[:2, :2],
-            #                      label="%d" % track.track_id)
-#
+def draw_trackers(tracks, image):
+    thickness = 2
+    for track in tracks:
+        if not track.is_confirmed() or track.time_since_update > 0:
+            continue
+        color = create_unique_color_uchar(track.track_id)
+        draw_rectangle(*track.to_tlwh(), image,
+                  label=str(track.track_id), thickness=thickness, color=color)

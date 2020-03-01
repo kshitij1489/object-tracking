@@ -85,7 +85,7 @@ def get_boxes(image, boxes, class_names, scores, selected_indices, min_score=0.2
       box_lst.append((int(left), int(top), int(right - left), int(bottom - top)))
       #box_lst.append((int(left), int(right), int(top), int(bottom)))
       box_count += 1
-  return box_lst
+  return np.array(box_lst)
 
 def non_max_suppression(boxes, scores):
     selected_indices = tf.image.non_max_suppression(boxes, scores, 1000, iou_threshold=0.5,
