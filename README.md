@@ -13,8 +13,11 @@ This application is an implementation of People tracking using Tensorflow implem
    - using a weighted sum of the cosine distance of CNN features and trajectory prediction score.
 
 ### Running the tracker
+Pass in the relative location of the video file <br>
+Example file_dir : ../videos/video_1.avi
+
 ```
-python object_tracking.py
+python object_tracking.py file_dir
 ```
 
 ### Files
