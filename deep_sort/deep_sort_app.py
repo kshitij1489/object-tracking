@@ -46,34 +46,30 @@ def create_detections(detection_mat, min_height=0, frame_idx=1):
 
 def run(image, detection, config, min_confidence,
         nms_max_overlap, min_detection_height):
+
     img_cpy = image.copy()
     seq_info = gather_sequence_info(detection, img_cpy)
     tracker = config.tracker
 
-
-    def frame_callback():
-
-        # Load image and generate detections.
-        detections = create_detections(
-            seq_info["detections"], min_detection_height)
-        detections = [d for d in detections if d.confidence >= min_confidence]
-
-        # Run non-maxima suppression.
-        boxes = np.array([d.tlwh for d in detections])
-        scores = np.array([d.confidence for d in detections])
-        # Check if non_max_suppression is needed again
-        indices = preprocessing.non_max_suppression(
-            boxes, nms_max_overlap, scores)
-        detections = [detections[i] for i in indices]
-
-        # Update tracker.
-        tracker.predict()
-        tracker.update(detections)
-
-        draw_trackers(tracker.tracks, img_cpy)
-
     # Run tracker.
-    frame_callback()
+    # Load image and generate detections.
+    detections = create_detections(
+        seq_info["detections"], min_detection_height)
+    detections = [d for d in detections if d.confidence >= min_confidence]
+
+    # Run non-maxima suppression.
+    boxes = np.array([d.tlwh for d in detections])
+    scores = np.array([d.confidence for d in detections])
+    # Check if non_max_suppression is needed again
+    indices = preprocessing.non_max_suppression(
+        boxes, nms_max_overlap, scores)
+    detections = [detections[i] for i in indices]
+
+    # Update tracker.
+    tracker.predict()
+    tracker.update(detections)
+
+    draw_trackers(tracker.tracks, img_cpy)
 
 def run_deep_sort(image, detection, config):
     min_confidence = 0.1
