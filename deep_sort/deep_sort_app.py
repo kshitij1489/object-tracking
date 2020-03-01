@@ -15,7 +15,7 @@ def gather_sequence_info(detections, image):
     image_size = image.shape[:2]
     min_frame_idx = 1
     max_frame_idx = 1
-    update_ms = 50
+    update_ms = 5
     feature_dim = detections.shape[1] - 10 if detections is not None else 0
     seq_info = {
         "sequence_name": "NA",
@@ -73,7 +73,7 @@ def run(image, detection, config, min_confidence,
         # Update visualization.
         if display:
             vis.set_image(image.copy())
-            vis.draw_detections(detections)
+            vis.draw_detections(detections) # Uncomment later
             vis.draw_trackers(tracker.tracks)
 
         # Store results.

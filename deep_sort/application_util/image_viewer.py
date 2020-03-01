@@ -209,78 +209,6 @@ class ImageViewer(object):
             cv2.putText(self.image, label, center, cv2.FONT_HERSHEY_PLAIN,
                         2, self.text_color, 2)
 
-    def annotate(self, x, y, text):
-        """Draws a text string at a given location.
-
-        Parameters
-        ----------
-        x : int | float
-            Bottom-left corner of the text in the image (x-axis).
-        y : int | float
-            Bottom-left corner of the text in the image (y-axis).
-        text : str
-            The text to be drawn.
-
-        """
-        cv2.putText(self.image, text, (int(x), int(y)), cv2.FONT_HERSHEY_PLAIN,
-                    2, self.text_color, 2)
-
-    def colored_points(self, points, colors=None, skip_index_check=False):
-        """Draw a collection of points.
-
-        The point size is fixed to 1.
-
-        Parameters
-        ----------
-        points : ndarray
-            The Nx2 array of image locations, where the first dimension is
-            the x-coordinate and the second dimension is the y-coordinate.
-        colors : Optional[ndarray]
-            The Nx3 array of colors (dtype=np.uint8). If None, the current
-            color attribute is used.
-        skip_index_check : Optional[bool]
-            If True, index range checks are skipped. This is faster, but
-            requires all points to lie within the image dimensions.
-
-        """
-        if not skip_index_check:
-            cond1, cond2 = points[:, 0] >= 0, points[:, 0] < 480
-            cond3, cond4 = points[:, 1] >= 0, points[:, 1] < 640
-            indices = np.logical_and.reduce((cond1, cond2, cond3, cond4))
-            points = points[indices, :]
-        if colors is None:
-            colors = np.repeat(
-                self._color, len(points)).reshape(3, len(points)).T
-        indices = (points + .5).astype(np.int)
-        self.image[indices[:, 1], indices[:, 0], :] = colors
-
-    def enable_videowriter(self, output_filename, fourcc_string="MJPG",
-                           fps=None):
-        """ Write images to video file.
-
-        Parameters
-        ----------
-        output_filename : str
-            Output filename.
-        fourcc_string : str
-            The OpenCV FOURCC code that defines the video codec (check OpenCV
-            documentation for more information).
-        fps : Optional[float]
-            Frames per second. If None, configured according to current
-            parameters.
-
-        """
-        fourcc = cv2.VideoWriter_fourcc(*fourcc_string)
-        if fps is None:
-            fps = int(1000. / self._update_ms)
-        self._video_writer = cv2.VideoWriter(
-            output_filename, fourcc, fps, self._window_shape)
-
-    def disable_videowriter(self):
-        """ Disable writing videos.
-        """
-        self._video_writer = None
-
     def run(self, update_fun=None):
         """Start the image viewer.
 
@@ -310,16 +238,7 @@ class ImageViewer(object):
             cv2.imshow(
                 self._caption, cv2.resize(self.image, self._window_shape[:2]))
             key = cv2.waitKey(remaining_time)
-            if key & 255 == 27:  # ESC
-                print("terminating")
-                self._terminate = True
-            elif key & 255 == 32:  # ' '
-                print("toggeling pause: " + str(not is_paused))
-                is_paused = not is_paused
-            elif key & 255 == 115:  # 's'
-                print("stepping")
-                self._terminate = not self._user_fun()
-                is_paused = True
+
 
         # Due to a bug in OpenCV we must call imshow after destroying the
         # window. This will make the window appear again as soon as waitKey

@@ -120,9 +120,9 @@ def generate_detections(encoder, boxes, image):
         The encoder function takes as input a BGR color image and a matrix of
         bounding boxes in format `(x, y, w, h)` and returns a matrix of
         corresponding feature vectors.
-    mot_dir : str
+    boxes : ??
         Path to the MOTChallenge directory (can be either train or test).
-    output_dir
+    image : ??
         Path to the output directory. Will be created if it does not exist.
     detection_dir
         Path to custom detections. The directory structure should be the default
@@ -133,12 +133,9 @@ def generate_detections(encoder, boxes, image):
     detections_in = np.ones((boxes.shape[0], 10))
     detections_in[:, 2:6] = boxes
 
-    rows = detections_in
-
     bgr_image = image
     features = encoder(bgr_image, boxes.copy())
-    detections_out = [np.r_[(row, feature)] for row, feature in zip(rows, features)]
-    #detections_out = np.concatenate((rows, features), axis=1)
+    detections_out = np.concatenate((detections_in, features), axis=1)
     return np.array(detections_out)
 
 def init_encoder():
